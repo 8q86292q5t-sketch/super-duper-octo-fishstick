@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#14161b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Voicebank</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <h1>Voicebank</h1>
+    <div class="progress" aria-label="Recording progress">
+      <div class="progress-bar"><span id="progressFill"></span></div>
+      <small id="progressText">0 / 0</small>
+    </div>
+  </header>
+
+  <main>
+    <!-- RECORD -->
+    <section id="view-record" class="view active">
+      <div class="row">
+        <label class="grow">
+          <span class="sr">Category</span>
+          <select id="categorySelect"></select>
+        </label>
+        <label class="toggle"><input type="checkbox" id="onlyMissing" checked /> Unrecorded only</label>
+      </div>
+
+      <article class="card phrase-card">
+        <div class="meta"><span id="phraseCategory"></span><span id="phraseId"></span></div>
+        <p id="phraseText" class="phrase">Loading…</p>
+        <div id="phraseStatus" class="status"></div>
+      </article>
+
+      <div class="meter"><span id="meterFill"></span></div>
+
+      <div class="record-area">
+        <button id="prevBtn" class="ghost" aria-label="Previous phrase">‹ Prev</button>
+        <button id="recordBtn" class="record" aria-label="Start recording"><span></span></button>
+        <button id="skipBtn" class="ghost" aria-label="Skip phrase">Skip ›</button>
+      </div>
+      <p id="recordHint" class="hint">Tap the red button, read the phrase, tap again to stop.</p>
+
+      <div id="review" class="card review" hidden>
+        <canvas id="waveform"></canvas>
+        <div id="reviewInfo" class="small"></div>
+        <ul id="reviewWarnings" class="warnings"></ul>
+        <div class="row">
+          <button id="playTakeBtn">▶ Play</button>
+          <button id="retryBtn" class="ghost">Retry</button>
+          <button id="keepBtn" class="primary grow">Keep &amp; next</button>
+        </div>
+      </div>
+
+      <details class="tips">
+        <summary>Recording tips for a good voice clone</summary>
+        <ul>
+          <li>Use the same quiet room, same mic and same distance (about a hand's width) for every session.</li>
+          <li>Wired earbuds with a mic or a headset mic beat the phone's built-in mic.</li>
+          <li>Speak naturally, in the tone you want the clone to have. Read punctuation: questions should sound like questions.</li>
+          <li>Record in several short sessions instead of one marathon; stop when your voice gets tired.</li>
+          <li>Say exactly what is written. If you stumble, retry the take.</li>
+          <li>Aim for every phrase. More clean audio = a better voice. ~30 min of speech is a solid start.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- LIBRARY -->
+    <section id="view-library" class="view">
+      <div class="row">
+        <input id="librarySearch" class="grow" type="search" placeholder="Search phrases" />
+        <select id="libraryFilter">
+          <option value="all">All</option>
+          <option value="done">Recorded</option>
+          <option value="todo">Not recorded</option>
+          <option value="warn">With warnings</option>
+        </select>
+      </div>
+      <ul id="libraryList" class="list"></ul>
+    </section>
+
+    <!-- SPEAK -->
+    <section id="view-speak" class="view">
+      <article class="card">
+        <h2>Text to voice</h2>
+        <textarea id="speakText" rows="5" placeholder="Type something to say…">Hello! This is my digital voice.</textarea>
+        <div class="row">
+          <select id="engineSelect" class="grow">
+            <option value="server">My voice model (local server)</option>
+            <option value="bank">My recordings (exact phrase / word match)</option>
+            <option value="device">Device voice (preview only)</option>
+          </select>
+          <button id="speakBtn" class="primary">Speak</button>
+        </div>
+        <div id="speakStatus" class="small"></div>
+        <audio id="speakAudio" controls hidden></audio>
+        <a id="speakDownload" class="small" hidden download="speech.wav">Download audio</a>
+      </article>
+      <details class="tips" open>
+        <summary>How do I get “my voice model”?</summary>
+        <p>The phone collects the data; a computer trains the voice once. Sync or export your recordings, train a
+          <b>Piper</b> voice from them (see README), then run <code>server.py --model your-voice.onnx</code>. This page
+          will then speak any text in your voice, fully offline on your own network.</p>
+        <p><b>My recordings</b> mode works right away: it plays back your takes for phrases or single words you have recorded.</p>
+      </details>
+    </section>
+
+    <!-- DATA -->
+    <section id="view-data" class="view">
+      <article class="card">
+        <h2>Your dataset</h2>
+        <div id="stats" class="stats"></div>
+      </article>
+
+      <article class="card">
+        <h2>Sync to computer</h2>
+        <p class="small">Uploads recordings to <code>dataset/</code> next to <code>server.py</code>, ready for training.</p>
+        <div class="row">
+          <button id="syncBtn" class="primary grow">Sync new recordings</button>
+          <button id="resyncBtn" class="ghost">Resync all</button>
+        </div>
+        <div id="syncStatus" class="small"></div>
+      </article>
+
+      <article class="card">
+        <h2>Export</h2>
+        <p class="small">ZIP with <code>wavs/*.wav</code> (22.05 kHz mono 16-bit) and LJSpeech-style <code>metadata.csv</code>. Also serves as a backup.</p>
+        <button id="exportBtn" class="grow">Download ZIP</button>
+        <div id="exportStatus" class="small"></div>
+      </article>
+
+      <article class="card">
+        <h2>Custom phrases</h2>
+        <p class="small">Add your own lines (one per line): names you say often, catchphrases, work vocabulary.</p>
+        <textarea id="customText" rows="5" placeholder="One phrase per line"></textarea>
+        <button id="customSaveBtn">Save custom phrases</button>
+        <div id="customStatus" class="small"></div>
+      </article>
+
+      <article class="card">
+        <h2>Settings</h2>
+        <label class="toggle"><input type="checkbox" id="setTrim" checked /> Trim silence at start/end</label>
+        <label class="toggle"><input type="checkbox" id="setNormalize" checked /> Normalize volume</label>
+        <label class="toggle"><input type="checkbox" id="setAutoKeep" /> Auto-keep takes without warnings</label>
+        <label>Server URL (blank = this page)
+          <input id="setServer" type="url" placeholder="https://192.168.1.20:8443" />
+        </label>
+        <button id="deleteAllBtn" class="danger">Delete all recordings</button>
+      </article>
+    </section>
+  </main>
+
+  <nav class="tabs">
+    <button data-view="record" class="active">🎙<span>Record</span></button>
+    <button data-view="library">☰<span>Phrases</span></button>
+    <button data-view="speak">🔊<span>Speak</span></button>
+    <button data-view="data">⇪<span>Data</span></button>
+  </nav>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

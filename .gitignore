@@ -1,0 +1,5 @@
+.certs/
+dataset/
+voices/
+__pycache__/
+*.zip
